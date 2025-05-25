@@ -11,9 +11,9 @@ app.use(express.json());
 const client = new Client({
     host: 'fisioapp.postgres.database.azure.com',
     port: 5432,
-    user: 'XXX',
-    password: 'XXX',
-    database: 'XXX',
+    user: 'admin1234',
+    password: 'usuario98-',
+    database: 'fisioapp',
     ssl: {
         rejectUnauthorized: false // Esto es para conexiones sin certificado. Ajusta si tienes certificado
     }
