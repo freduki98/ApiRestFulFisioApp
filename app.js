@@ -18,8 +18,8 @@ app.use(express.json());
 const client = new Client({
     host: azureHost,
     port: 5432,
-    user: 'admin1234',
-    password: dbUser,
+    user: dbUser,
+    password: dbPassword,
     database: dbName,
     ssl: {
         rejectUnauthorized: false // Esto es para conexiones sin certificado. Ajusta si tienes certificado
