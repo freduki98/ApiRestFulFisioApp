@@ -5,12 +5,10 @@ const { Client } = require('pg');
 const app = express();
 const port = process.env.PORT || 3000;
 
-module.exports = {
-  azureHost: process.env.HOST_AZURE,
-  dbUser: process.env.USER_DB,
-  dbPassword: process.env.PASSWORD_DB,
-  dbName: process.env.NAME_DB
-};
+azureHost: process.env.HOST_AZURE;
+dbUser: process.env.USER_DB;
+dbPassword: process.env.PASSWORD_DB;
+dbName: process.env.NAME_DB;
 
 app.use(cors());
 app.use(express.json());
