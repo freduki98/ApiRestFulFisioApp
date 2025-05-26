@@ -5,13 +5,26 @@ const { Client } = require('pg');
 const app = express();
 const port = process.env.PORT || 3000; 
 
+// CREDENCIALES BASE DE DATOS
 const azureHost = process.env.HOST_AZURE;
 const dbUser = process.env.USER_DB;
 const dbPassword = process.env.PASSWORD_DB;
 const dbName = process.env.NAME_DB;
 
+// // CREDENCIALES FIREBASE
+const admin = require('firebase-admin');
+
+admin.initializeApp({
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  })
+});
+
 app.use(cors());
 app.use(express.json());
+
 
 const client = new Client({
     host: azureHost,
@@ -20,16 +33,38 @@ const client = new Client({
     password: dbPassword,
     database: dbName,
     ssl: {
-        rejectUnauthorized: false // Esto es para conexiones sin certificado. Ajusta si tienes certificado
+        rejectUnauthorized: false 
     }
 });
 
+// VERIFICACIÓN USUARIO VÁLIDO
+async function checkAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+  
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).send('No autorizado');
+    }
+  
+    const idToken = authHeader.split('Bearer ')[1];
+  
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      req.user = decodedToken;
+      next();
+    } catch (error) {
+      console.error('Error al verificar token:', error);
+      res.status(401).send('Token inválido');
+    }
+  }
+
+
+// CONEXIÓN CON BASE DE DATOS
 client.connect()
     .then(() => console.log('Conectado a la base de datos PostgreSQL'))
     .catch(err => console.error('Error al conectar a PostgreSQL', err.stack));
 
 // Obtener todos los pacientes de un fisioterapeuta
-app.get('/pacientes', async (req, res) => {
+app.get('/pacientes', checkAuth, async (req, res) => {
     const { fisio_id } = req.query;
     try {
         const result = await client.query(
@@ -44,7 +79,7 @@ app.get('/pacientes', async (req, res) => {
 });
 
 // Buscar paciente por nombre y fisioterapeuta
-app.get('/paciente', async (req, res) => {
+app.get('/paciente', checkAuth, async (req, res) => {
     const { nombre, fisio_id } = req.query;
     try {
         const result = await client.query(
@@ -60,7 +95,7 @@ app.get('/paciente', async (req, res) => {
 });
 
 // Insertar nuevo paciente
-app.post('/new_paciente', async (req, res) => {
+app.post('/new_paciente', checkAuth, async (req, res) => {
     const { paciente_id, nombre, apellidos, direccion, telefono, fecha_nacimiento, fisio_id } = req.body;
     try {
         await client.query(
@@ -76,7 +111,7 @@ app.post('/new_paciente', async (req, res) => {
 });
 
 // Editar paciente
-app.put('/edit_paciente', async (req, res) => {
+app.put('/edit_paciente', checkAuth, async (req, res) => {
     const { paciente_id, nombre, apellidos, direccion, telefono, fecha_nacimiento, fisio_id } = req.body;
     try {
         await client.query(
@@ -93,7 +128,7 @@ app.put('/edit_paciente', async (req, res) => {
 });
 
 // Eliminar paciente
-app.delete('/delete_paciente', async (req, res) => {
+app.delete('/delete_paciente', checkAuth, async (req, res) => {
     const { paciente_id, fisio_id } = req.query;
     try {
         await client.query(
@@ -108,7 +143,7 @@ app.delete('/delete_paciente', async (req, res) => {
 });
 
 // Obtener diagnósticos de un paciente
-app.get('/historialPaciente', async (req, res) => {
+app.get('/historialPaciente', checkAuth, async (req, res) => {
     const { paciente_id, fisio_id } = req.query;
 
     try {
@@ -127,7 +162,7 @@ app.get('/historialPaciente', async (req, res) => {
 });
 
 // Obtener diagnósticos disponibles
-app.get('/diagnosticosDisponibles', async (req, res) => {
+app.get('/diagnosticosDisponibles', checkAuth, async (req, res) => {
     const { } = req.query;
 
     try {
@@ -145,7 +180,7 @@ app.get('/diagnosticosDisponibles', async (req, res) => {
 });
 
 // Obtener diagnósticos por ID
-app.get('/diagnosticoById', async (req, res) => {
+app.get('/diagnosticoById', checkAuth, async (req, res) => {
     const {id } = req.query;
 
     try {
@@ -163,7 +198,7 @@ app.get('/diagnosticoById', async (req, res) => {
 });
 
 // Obtener diagnóstico del paciente
-app.get('/diagnostico_paciente', async (req, res) => {
+app.get('/diagnostico_paciente', checkAuth, async (req, res) => {
     const {paciente_id, fisio_id, diagnostico_id} = req.query;
 
     try {
@@ -180,7 +215,7 @@ app.get('/diagnostico_paciente', async (req, res) => {
     }
 });
 
-app.post('/new_diagnostico_paciente', async (req, res) => {
+app.post('/new_diagnostico_paciente', checkAuth, async (req, res) => {
     const {
         paciente_id,
         fisio_id,
@@ -206,7 +241,7 @@ app.post('/new_diagnostico_paciente', async (req, res) => {
     }
 });
 
-app.put('/edit_diagnostico_paciente', async (req, res) => {
+app.put('/edit_diagnostico_paciente', checkAuth, async (req, res) => {
     const {
         paciente_id,
         fisio_id,
@@ -236,7 +271,7 @@ app.put('/edit_diagnostico_paciente', async (req, res) => {
     }
 });
 
-app.delete('/delete_diagnostico_paciente', async (req, res) => {
+app.delete('/delete_diagnostico_paciente', checkAuth, async (req, res) => {
     const { paciente_id, fisio_id, diagnostico_id } = req.query;
     try {
         await client.query(
@@ -251,7 +286,7 @@ app.delete('/delete_diagnostico_paciente', async (req, res) => {
 });
 
 // Obtener último diagnóstico del paciente
-app.get('/ultimo_diagnostico_paciente', async (req, res) => {
+app.get('/ultimo_diagnostico_paciente', checkAuth, async (req, res) => {
     const {paciente_id, fisio_id} = req.query;
 
     try {
