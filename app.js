@@ -25,7 +25,7 @@ admin.initializeApp({
 app.use(cors());
 app.use(express.json());
 
-
+// INICIALIZACION CLIENTE BASE DE DATOS
 const client = new Client({
     host: azureHost,
     port: 5432,
