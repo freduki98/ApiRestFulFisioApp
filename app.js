@@ -1,12 +1,9 @@
-// INICIALIZACIÓN MÓDULOS
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
-const app = express();
-const port = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+const app = express();
+const port = process.env.PORT || 3000; 
 
 // CREDENCIALES BASE DE DATOS
 const azureHost = process.env.HOST_AZURE;
@@ -14,18 +11,21 @@ const dbUser = process.env.USER_DB;
 const dbPassword = process.env.PASSWORD_DB;
 const dbName = process.env.NAME_DB;
 
-// CREDENCIALES FIREBASE
+// // CREDENCIALES FIREBASE
 const admin = require('firebase-admin');
 
 admin.initializeApp({
-    credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    })
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  })
 });
 
-// INICIALIZACIÓN CLIENTE BASE DE DATOS
+app.use(cors());
+app.use(express.json());
+
+
 const client = new Client({
     host: azureHost,
     port: 5432,
@@ -33,40 +33,30 @@ const client = new Client({
     password: dbPassword,
     database: dbName,
     ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false 
     }
 });
 
 // VERIFICACIÓN USUARIO VÁLIDO
 async function checkAuth(req, res, next) {
     const authHeader = req.headers.authorization;
-
+  
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).send('No autorizado');
+      return res.status(401).send('No autorizado');
     }
-
+  
     const idToken = authHeader.split('Bearer ')[1];
-
+  
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        req.user = decodedToken;
-        next();
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      req.user = decodedToken;
+      next();
     } catch (error) {
-        console.error('Error al verificar token:', error);
-        res.status(401).send('Token inválido');
+      console.error('Error al verificar token:', error);
+      res.status(401).send('Token inválido');
     }
-}
+  }
 
-// // CREDENCIALES FIREBASE
-const admin = require('firebase-admin');
-
-admin.initializeApp({
-    credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    })
-});
 
 // CONEXIÓN CON BASE DE DATOS
 client.connect()
@@ -158,8 +148,8 @@ app.get('/historialPaciente', checkAuth, async (req, res) => {
 
     try {
         const result = await client.query(
-            'SELECT d.id, d.sistema_lesionado, d.zona_afectada ' +
-            'FROM diagnostico_medico d, paciente_historial_medico hm ' +
+            'SELECT d.id, d.sistema_lesionado, d.zona_afectada '+
+            'FROM diagnostico_medico d, paciente_historial_medico hm '+
             'WHERE d.id = hm.diagnostico_id AND hm.paciente_id = $1 AND hm.fisio_id = $2',
             [paciente_id, fisio_id]
         );
@@ -177,7 +167,7 @@ app.get('/diagnosticosDisponibles', checkAuth, async (req, res) => {
 
     try {
         const result = await client.query(
-            'SELECT id, sistema_lesionado, zona_afectada ' +
+            'SELECT id, sistema_lesionado, zona_afectada '+
             'FROM diagnostico_medico',
             []
         );
@@ -191,11 +181,11 @@ app.get('/diagnosticosDisponibles', checkAuth, async (req, res) => {
 
 // Obtener diagnósticos por ID
 app.get('/diagnosticoById', checkAuth, async (req, res) => {
-    const { id } = req.query;
+    const {id } = req.query;
 
     try {
         const result = await client.query(
-            'SELECT id, sistema_lesionado, zona_afectada ' +
+            'SELECT id, sistema_lesionado, zona_afectada '+
             'FROM diagnostico_medico WHERE id  ~* $1 ',
             [id]
         );
@@ -209,11 +199,11 @@ app.get('/diagnosticoById', checkAuth, async (req, res) => {
 
 // Obtener diagnóstico del paciente
 app.get('/diagnostico_paciente', checkAuth, async (req, res) => {
-    const { paciente_id, fisio_id, diagnostico_id } = req.query;
+    const {paciente_id, fisio_id, diagnostico_id} = req.query;
 
     try {
         const result = await client.query(
-            'SELECT diagnostico_id, fecha_diagnostico, fecha_inicio_tratamiento, fecha_fin_tratamiento, sintomas, medicamentos ' +
+            'SELECT diagnostico_id, fecha_diagnostico, fecha_inicio_tratamiento, fecha_fin_tratamiento, sintomas, medicamentos '+
             'FROM paciente_historial_medico WHERE diagnostico_id = $1 AND fisio_id = $2 AND paciente_id = $3 ',
             [diagnostico_id, fisio_id, paciente_id]
         );
@@ -297,7 +287,7 @@ app.delete('/delete_diagnostico_paciente', checkAuth, async (req, res) => {
 
 // Obtener último diagnóstico del paciente
 app.get('/ultimo_diagnostico_paciente', checkAuth, async (req, res) => {
-    const { paciente_id, fisio_id } = req.query;
+    const {paciente_id, fisio_id} = req.query;
 
     try {
         const result = await client.query(
@@ -307,10 +297,10 @@ app.get('/ultimo_diagnostico_paciente', checkAuth, async (req, res) => {
              WHERE ph.paciente_id = $1 AND ph.fisio_id = $2
              ORDER BY ph.fecha_diagnostico DESC 
              LIMIT 1`,
-            [paciente_id, fisio_id]
-        );
+             [paciente_id, fisio_id]
+         );
 
-        res.status(200).json(result.rows[0] || {});
+         res.status(200).json(result.rows[0] || {});
     } catch (error) {
         console.error('Error al obtener el último diagnóstico del paciente:', error);
         res.sendStatus(500);
