@@ -5,15 +5,22 @@ const { Client } = require('pg');
 const app = express();
 const port = process.env.PORT || 3000;
 
+module.exports = {
+  azureHost: process.env.HOST_AZURE,
+  dbUser: process.env.USER_DB,
+  dbPassword: process.env.PASSWORD_DB,
+  dbName: process.env.NAME_DB
+};
+
 app.use(cors());
 app.use(express.json());
 
 const client = new Client({
-    host: 'fisioapp.postgres.database.azure.com',
+    host: azureHost,
     port: 5432,
     user: 'admin1234',
-    password: 'usuario98-',
-    database: 'fisioapp',
+    password: dbUser,
+    database: dbName,
     ssl: {
         rejectUnauthorized: false // Esto es para conexiones sin certificado. Ajusta si tienes certificado
     }
